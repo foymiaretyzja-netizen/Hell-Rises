@@ -3,29 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS5 Controller Game Revamp</title>
+    <title>Hell Rises</title>
     <style>
+        /* Import a gritty, typewriter-style font */
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
         body {
             margin: 0;
-            background-color: #222;
+            background-color: #0a0000; /* Deep dark red/black */
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            color: white;
-            font-family: sans-serif;
+            color: #ff4400;
+            font-family: 'Courier Prime', monospace;
         }
         canvas {
-            background-color: #111;
-            border: 4px solid #444;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            background-color: #1a0505;
+            border: 4px solid #551100;
+            box-shadow: 0 0 30px rgba(255, 50, 0, 0.3); /* Fiery glow */
         }
-        #ui { position: absolute; top: 20px; left: 20px; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #ffaa00; font-weight: bold;}
     </style>
 </head>
 <body>
 
-    <div id="ui">Connect PS5 Controller and press any button to start!</div>
+    <div id="ui">Connect PS5 Controller...</div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
 <script>
@@ -33,71 +36,102 @@
     const ctx = canvas.getContext('2d');
     const ui = document.getElementById('ui');
 
+    // Game State variable ('menu' or 'play')
+    let gameState = 'menu';
+
     // Player Object
     const player = {
         x: canvas.width / 2,
         y: canvas.height / 2,
         radius: 15,
-        speed: 5,
-        color: '#00ffcc'
+        speed: 6,
+        color: '#ff8800' // Fiery orange
     };
 
-    // Controller deadzone to prevent "stick drift"
     const DEADZONE = 0.15; 
+    let controllerConnected = false;
 
     function update() {
-        // The Gamepad API needs to be polled every single frame
         const gamepads = navigator.getGamepads();
-        const pad = gamepads[0]; // Grabs the first connected controller
+        const pad = gamepads[0]; 
 
         if (pad) {
-            ui.innerText = "PS5 Controller Connected! Use Left Stick to move.";
+            controllerConnected = true;
+            
+            // MENU STATE LOGIC
+            if (gameState === 'menu') {
+                ui.innerText = "Main Menu";
+                // Press 'X' (Button 0) to start
+                if (pad.buttons[0].pressed) {
+                    gameState = 'play';
+                }
+            } 
+            
+            // PLAY STATE LOGIC
+            else if (gameState === 'play') {
+                ui.innerText = "Survive the depths.";
+                
+                let moveX = pad.axes[0];
+                let moveY = pad.axes[1];
 
-            // Left Stick Axes (0 is X-axis left/right, 1 is Y-axis up/down)
-            let moveX = pad.axes[0];
-            let moveY = pad.axes[1];
+                if (Math.abs(moveX) > DEADZONE) player.x += moveX * player.speed;
+                if (Math.abs(moveY) > DEADZONE) player.y += moveY * player.speed;
 
-            // Apply deadzone so the player doesn't drift when the stick is resting
-            if (Math.abs(moveX) > DEADZONE) {
-                player.x += moveX * player.speed;
+                // Keep player inside the canvas
+                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+                player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
             }
-            if (Math.abs(moveY) > DEADZONE) {
-                player.y += moveY * player.speed;
-            }
-
-            // Optional: Map the "X" button (Button 0) to a dash or special ability later
-            if (pad.buttons[0].pressed) {
-                player.color = '#ff0055'; // Change color when pressing X
-            } else {
-                player.color = '#00ffcc';
-            }
-
-            // Keep player inside the canvas walls
-            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+        } else {
+            controllerConnected = false;
+            ui.innerText = "Waiting for PS5 Controller...";
         }
     }
 
     function draw() {
-        // Clear the screen every frame
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw the player
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-        ctx.fillStyle = player.color;
-        ctx.fill();
-        ctx.closePath();
+        if (gameState === 'menu') {
+            // Draw Title Screen
+            ctx.fillStyle = "#ff2200";
+            ctx.font = "bold 80px 'Courier Prime'";
+            ctx.textAlign = "center";
+            ctx.fillText("HELL RISES", canvas.width / 2, canvas.height / 2 - 40);
+
+            ctx.fillStyle = "#ffaa00";
+            ctx.font = "24px 'Courier Prime'";
+            
+            if (controllerConnected) {
+                // Make the start prompt blink slightly based on time
+                if (Math.floor(Date.now() / 500) % 2 === 0) {
+                    ctx.fillText("Press [X] on Controller to Start", canvas.width / 2, canvas.height / 2 + 40);
+                }
+            } else {
+                ctx.fillText("Please connect a controller to play", canvas.width / 2, canvas.height / 2 + 40);
+            }
+        } 
+        else if (gameState === 'play') {
+            // Draw Gameplay
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            
+            // Add a slight glow to the player
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.closePath();
+            
+            // Reset shadow so it doesn't mess up other drawings later
+            ctx.shadowBlur = 0; 
+        }
     }
 
-    // The core Game Loop
     function gameLoop() {
         update();
         draw();
-        requestAnimationFrame(gameLoop); // Calls the loop 60 times a second
+        requestAnimationFrame(gameLoop);
     }
 
-    // Start the game loop
     gameLoop();
 </script>
 
