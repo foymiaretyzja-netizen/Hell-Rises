@@ -5,30 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hell Rises</title>
     <style>
-        /* Import a gritty, typewriter-style font */
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400&display=swap');
 
         body {
             margin: 0;
-            background-color: #0a0000; /* Deep dark red/black */
+            background-color: #050000;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             color: #ff4400;
             font-family: 'Courier Prime', monospace;
+            overflow: hidden; /* Stops scrolling */
         }
+
         canvas {
-            background-color: #1a0505;
-            border: 4px solid #551100;
-            box-shadow: 0 0 30px rgba(255, 50, 0, 0.3); /* Fiery glow */
+            background-color: #0f0202;
+            border: 2px solid #330a00;
+            z-index: 10;
         }
-        #ui { position: absolute; top: 20px; left: 20px; color: #ffaa00; font-weight: bold;}
+
+        /* Pulsating glow at the bottom of the webpage */
+        .bottom-glow {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25vh;
+            background: linear-gradient(to top, rgba(200, 30, 0, 0.4), transparent);
+            animation: pulseGlow 3s infinite alternate ease-in-out;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        /* The hard zoom-in impact animation for the title */
+        @keyframes slamImpact {
+            0% { transform: scale(4); opacity: 0; }
+            70% { transform: scale(0.95); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #ui { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: #ff8800; 
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">Connect PS5 Controller...</div>
+    <div id="ui">Waiting for PS5 Controller...</div>
+    <div class="bottom-glow"></div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
 <script>
@@ -36,54 +70,76 @@
     const ctx = canvas.getContext('2d');
     const ui = document.getElementById('ui');
 
-    // Game State variable ('menu' or 'play')
     let gameState = 'menu';
+    let controllerConnected = false;
+    const DEADZONE = 0.15; 
+
+    // --- EMBER PARTICLE SYSTEM ---
+    let embers = [];
+    function createEmber() {
+        return {
+            x: Math.random() * canvas.width,
+            y: canvas.height + 10,
+            size: Math.random() * 3 + 1,
+            speedY: Math.random() * 2 + 1,
+            speedX: (Math.random() - 0.5),
+            opacity: Math.random() * 0.8 + 0.2
+        };
+    }
+    // Pre-fill screen with embers
+    for(let i=0; i<40; i++) embers.push(createEmber()); 
 
     // Player Object
     const player = {
         x: canvas.width / 2,
         y: canvas.height / 2,
-        radius: 15,
+        radius: 12,
         speed: 6,
-        color: '#ff8800' // Fiery orange
+        color: '#ff8800'
     };
 
-    const DEADZONE = 0.15; 
-    let controllerConnected = false;
+    // Variables to track title animation timing
+    let menuStartTime = Date.now();
 
     function update() {
         const gamepads = navigator.getGamepads();
         const pad = gamepads[0]; 
 
+        // Update Embers
+        if (gameState === 'menu') {
+            for (let i = 0; i < embers.length; i++) {
+                embers[i].y -= embers[i].speedY;
+                embers[i].x += embers[i].speedX;
+                embers[i].opacity -= 0.005;
+
+                if (embers[i].y < 0 || embers[i].opacity <= 0) {
+                    embers[i] = createEmber(); // Respawn ember at bottom
+                }
+            }
+        }
+
         if (pad) {
             controllerConnected = true;
             
-            // MENU STATE LOGIC
             if (gameState === 'menu') {
                 ui.innerText = "Main Menu";
-                // Press 'X' (Button 0) to start
                 if (pad.buttons[0].pressed) {
                     gameState = 'play';
                 }
-            } 
-            
-            // PLAY STATE LOGIC
-            else if (gameState === 'play') {
+            } else if (gameState === 'play') {
                 ui.innerText = "Survive the depths.";
-                
                 let moveX = pad.axes[0];
                 let moveY = pad.axes[1];
 
                 if (Math.abs(moveX) > DEADZONE) player.x += moveX * player.speed;
                 if (Math.abs(moveY) > DEADZONE) player.y += moveY * player.speed;
 
-                // Keep player inside the canvas
                 player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
                 player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
             }
         } else {
             controllerConnected = false;
-            ui.innerText = "Waiting for PS5 Controller...";
+            ui.innerText = "Connect PS5 Controller & Press Any Button";
         }
     }
 
@@ -91,38 +147,56 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (gameState === 'menu') {
-            // Draw Title Screen
-            ctx.fillStyle = "#ff2200";
-            ctx.font = "bold 80px 'Courier Prime'";
-            ctx.textAlign = "center";
-            ctx.fillText("HELL RISES", canvas.width / 2, canvas.height / 2 - 40);
+            // Draw Embers
+            for (let e of embers) {
+                ctx.fillStyle = `rgba(255, 100, 0, ${e.opacity})`;
+                ctx.fillRect(e.x, e.y, e.size, e.size);
+            }
 
-            ctx.fillStyle = "#ffaa00";
-            ctx.font = "24px 'Courier Prime'";
+            // Calculate Zoom Impact purely in JavaScript for the Canvas text
+            let timeElapsed = (Date.now() - menuStartTime) / 1000; // in seconds
+            let scale = 1;
+            let opacity = 1;
+
+            if (timeElapsed < 0.5) {
+                // Animate from scale 4 to 1 over 0.5 seconds
+                scale = 4 - (3 * (timeElapsed / 0.5));
+                opacity = timeElapsed / 0.5;
+            } else if (timeElapsed < 0.6) {
+                // Slight bounce impact
+                scale = 0.98;
+            }
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2 - 40);
+            ctx.scale(scale, scale);
             
-            if (controllerConnected) {
-                // Make the start prompt blink slightly based on time
-                if (Math.floor(Date.now() / 500) % 2 === 0) {
-                    ctx.fillText("Press [X] on Controller to Start", canvas.width / 2, canvas.height / 2 + 40);
+            // Draw Title (Thin font)
+            ctx.fillStyle = `rgba(255, 68, 0, ${opacity})`;
+            ctx.font = "normal 70px 'Courier Prime'";
+            ctx.textAlign = "center";
+            ctx.fillText("HELL RISES", 0, 0);
+            ctx.restore();
+
+            // Draw "Press Start" text after impact finishes
+            if (timeElapsed > 1) {
+                ctx.fillStyle = "#ffaa00";
+                ctx.font = "20px 'Courier Prime'";
+                ctx.textAlign = "center";
+                
+                if (controllerConnected) {
+                    if (Math.floor(Date.now() / 500) % 2 === 0) {
+                        ctx.fillText("Press [X] to Descend", canvas.width / 2, canvas.height / 2 + 60);
+                    }
                 }
-            } else {
-                ctx.fillText("Please connect a controller to play", canvas.width / 2, canvas.height / 2 + 40);
             }
         } 
         else if (gameState === 'play') {
-            // Draw Gameplay
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fillStyle = player.color;
             ctx.fill();
-            
-            // Add a slight glow to the player
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = player.color;
             ctx.closePath();
-            
-            // Reset shadow so it doesn't mess up other drawings later
-            ctx.shadowBlur = 0; 
         }
     }
 
