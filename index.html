@@ -2,215 +2,236 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hell Rises Intro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hell Rises - Intro</title>
     <style>
-        body, html {
+        /* Base Styling */
+        body {
             margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #050000;
             overflow: hidden;
-            font-family: 'Arial Black', sans-serif;
-            transition: opacity 1s ease-out; /* For the fade-out effect later */
-        }
-
-        /* The Impact Title */
-        .title-container {
-            position: absolute;
-            top: 40%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            perspective: 1000px;
-        }
-
-        .title {
-            font-size: 8rem;
-            color: #ff3300;
-            text-transform: uppercase;
-            letter-spacing: 10px;
-            text-shadow: 0 0 20px rgba(255, 68, 0, 0.8);
-            opacity: 0;
-            animation: zoomImpact 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-                      shake 0.15s 0.6s ease-in-out 3;
-        }
-
-        @keyframes zoomImpact {
-            0% { transform: scale(10); opacity: 0; filter: blur(20px); }
-            100% { transform: scale(1); opacity: 1; filter: blur(0); }
-        }
-
-        @keyframes shake {
-            0% { transform: translate(2px, 1px) rotate(0deg); }
-            50% { transform: translate(-1px, -2px) rotate(-1deg); }
-            100% { transform: translate(1px, -1px) rotate(1deg); }
+            background-color: #050000;
+            color: white;
+            font-family: 'Trebuchet MS', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
 
         /* Pulsating Bottom Gradient */
-        .bottom-glow {
+        #bottom-glow {
             position: absolute;
             bottom: 0;
             width: 100%;
-            height: 30vh;
-            background: linear-gradient(to top, #661100, #ff4400, transparent);
-            opacity: 0.6;
-            animation: pulse 3s infinite alternate ease-in-out;
+            height: 45%;
+            background: linear-gradient(to top, rgba(200, 20, 0, 0.3) 0%, transparent 100%);
+            z-index: 1;
+            animation: pulse-glow 3s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Ember Canvas Setup */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
             pointer-events: none;
         }
 
-        @keyframes pulse {
-            from { opacity: 0.4; height: 25vh; }
-            to { opacity: 0.8; height: 35vh; }
-        }
-
-        #emberCanvas {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 50%;
-        }
-
-        /* NEW: Press X Prompt */
-        .start-prompt {
-            position: absolute;
-            bottom: 15%;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #aaaaaa;
-            font-size: 1.2rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            /* Start hidden, delay animation until after title impact */
-            opacity: 0; 
-            animation: fadeInBlink 2s 1.5s infinite alternate ease-in-out;
+        /* UI Container */
+        #ui-layer {
             z-index: 10;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: center;
         }
 
-        .ps-x {
-            color: #7a9cff; /* Standard PlayStation Blue */
+        /* Zoom-Impact Title Animation */
+        #title {
+            font-size: 8rem;
+            font-weight: 900;
+            color: #ff2a00;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 5px 25px rgba(255, 0, 0, 0.8), 0 0 5px rgba(255, 100, 0, 0.5);
+            /* Initial state before animation */
+            opacity: 0; 
+            transform: scale(4); 
+            /* The slam: fast in, hard stop */
+            animation: impact 0.4s cubic-bezier(.2,.9,.3,1.1) forwards;
+        }
+
+        @keyframes impact {
+            0% { transform: scale(5); opacity: 0; }
+            80% { transform: scale(0.95); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Press X to Continue */
+        #press-x {
+            margin-top: 80px;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            opacity: 0; /* Hidden initially */
+            color: #dddddd;
+        }
+
+        /* Added via JS after 5 seconds */
+        .show-pulse {
+            animation: text-pulse 1.2s infinite alternate forwards;
+        }
+
+        @keyframes text-pulse {
+            0% { opacity: 0.3; text-shadow: 0 0 0px transparent; }
+            100% { opacity: 1; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+        }
+
+        /* PlayStation 'Cross' Button styling */
+        .ps5-x {
+            color: #7A9BCC;
             font-weight: bold;
-            font-family: sans-serif;
-            text-shadow: 0 0 8px rgba(122, 156, 255, 0.6);
-        }
-
-        @keyframes fadeInBlink {
-            0% { opacity: 0.2; }
-            100% { opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            font-size: 1.3em;
         }
     </style>
 </head>
 <body>
 
-    <div class="title-container">
-        <h1 class="title">HELL RISES</h1>
-    </div>
+    <div id="bottom-glow"></div>
+    <canvas id="embers"></canvas>
 
-    <div id="startPrompt" class="start-prompt">
-        Press <span class="ps-x">X</span> to Continue
+    <div id="ui-layer">
+        <div id="title">Hell Rises</div>
+        <div id="press-x">Press <span class="ps5-x">&#10005;</span> to continue</div>
     </div>
-
-    <div class="bottom-glow"></div>
-    <canvas id="emberCanvas"></canvas>
 
     <script>
-        // --- Canvas & Ember Logic ---
-        const canvas = document.getElementById('emberCanvas');
+        // --- 1. TIMING LOGIC ---
+        let canProceed = false;
+
+        // Show the "Press X" text after 5 seconds (5000 milliseconds)
+        setTimeout(() => {
+            const pressXText = document.getElementById('press-x');
+            pressXText.classList.add('show-pulse');
+            canProceed = true;
+        }, 5000);
+
+
+        // --- 2. EMBER PARTICLE SYSTEM ---
+        const canvas = document.getElementById('embers');
         const ctx = canvas.getContext('2d');
+        
+        // Resize canvas to window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
         let particles = [];
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight / 2;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        class Ember {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = canvas.height + 10;
-                this.size = Math.random() * 3 + 1;
-                this.speedY = Math.random() * -2 - 1;
-                this.speedX = Math.random() * 2 - 1;
-                this.life = 1;
-                this.decay = Math.random() * 0.01 + 0.005;
-            }
-            update() {
-                this.y += this.speedY;
-                this.x += this.speedX;
-                this.life -= this.decay;
-            }
-            draw() {
-                ctx.fillStyle = `rgba(255, ${Math.floor(this.life * 150)}, 0, ${this.life})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
+        function createEmber() {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: canvas.height + 10, // Start slightly below screen
+                radius: Math.random() * 2.5 + 0.5,
+                dx: (Math.random() - 0.5) * 1.5, // Drift left/right
+                dy: -(Math.random() * 2 + 1),    // Float up
+                life: 1, // Opacity
+                decay: Math.random() * 0.005 + 0.002,
+                color: Math.random() > 0.6 ? '255, 60, 0' : '255, 140, 0' // Red/Orange mix
+            });
         }
 
-        // --- Gamepad & Input Logic ---
-        let isTransitioning = false;
-
-        function startGame() {
-            if (isTransitioning) return; // Prevent multiple triggers
-            isTransitioning = true;
-            
-            console.log("Start trigger fired! Proceeding to main menu/game...");
-            
-            // Trigger a dramatic fade to black
-            document.body.style.opacity = 0;
-
-            // Here is where you would load your next scene or canvas state
-            // setTimeout(() => { window.location.href = 'main_game.html'; }, 1000);
-        }
-
-        // Keyboard fallback for testing
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                startGame();
-            }
-        });
-
-        function pollGamepads() {
-            // Get all connected controllers
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            
-            for (let i = 0; i < gamepads.length; i++) {
-                const gp = gamepads[i];
-                if (gp) {
-                    // Button 0 is the Cross (X) button on PlayStation controllers
-                    if (gp.buttons[0].pressed) {
-                        startGame();
-                    }
-                }
-            }
-        }
-
-        // --- Main Animation Loop ---
-        function animate() {
+        function animateEmbers() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            if (particles.length < 100) {
-                particles.push(new Ember());
-            }
-
+            // Control ember density
+            if (Math.random() < 0.5) createEmber();
+            
             for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-                if (particles[i].life <= 0) {
+                let p = particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life -= p.decay;
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.color}, ${p.life})`;
+                ctx.fill();
+                
+                // Remove dead particles
+                if (p.life <= 0) {
                     particles.splice(i, 1);
                     i--;
                 }
             }
-
-            // Check controller input every frame
-            pollGamepads();
-
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animateEmbers);
         }
+        animateEmbers();
 
-        animate();
+
+        // --- 3. PS5 CONTROLLER LOGIC ---
+        // In the standard Gamepad API, the primary face button (Cross/X on PS) is button[0]
+        let buttonPressedPreviously = false;
+
+        function pollGamepads() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            
+            for (let i = 0; i < gamepads.length; i++) {
+                const pad = gamepads[i];
+                if (pad) {
+                    // Button 0 is the 'South' button (Cross on PS5, A on Xbox)
+                    const xButton = pad.buttons[0];
+                    
+                    if (xButton.pressed && !buttonPressedPreviously) {
+                        buttonPressedPreviously = true;
+                        
+                        if (canProceed) {
+                            handleContinue();
+                        }
+                    } else if (!xButton.pressed) {
+                        buttonPressedPreviously = false;
+                    }
+                }
+            }
+            // Keep polling every frame
+            requestAnimationFrame(pollGamepads);
+        }
+        pollGamepads();
+
+        // Keyboard fallback for testing (Spacebar or 'X' key)
+        window.addEventListener('keydown', (e) => {
+            if ((e.code === 'Space' || e.key.toLowerCase() === 'x') && canProceed) {
+                handleContinue();
+            }
+        });
+
+        // Triggered when X is pressed after 5 seconds
+        function handleContinue() {
+            canProceed = false; // Prevent double-triggering
+            
+            // Example transition effect
+            document.body.style.transition = "opacity 1s";
+            document.body.style.opacity = "0";
+            
+            setTimeout(() => {
+                alert("Game starting! (Transition logic goes here)");
+                document.body.style.opacity = "1"; // Reset for demo
+                canProceed = true;
+            }, 1000);
+        }
     </script>
 </body>
 </html>
