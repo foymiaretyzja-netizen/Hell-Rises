@@ -72,4 +72,18 @@ function draw() {
     // --- NEW DIRECTIONAL DOT ---
     // Draw a small dot near the front (positive X is 'forward' after rotation)
     ctx.beginPath();
-    // Offset by radius - 8 pixels so it sits inside the character's front
+    // Offset by radius - 8 pixels so it sits inside the character's front edge
+    ctx.arc(player.radius - 8, 0, 4, 0, Math.PI * 2); 
+    ctx.fillStyle = 'red';
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
