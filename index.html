@@ -3,211 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hell Rises</title>
+    <title>Hell Rises Intro</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400&display=swap');
+        :root {
+            --fire-glow: rgba(255, 69, 0, 0.6);
+            --deep-red: #4e0000;
+        }
 
-        body {
+        body, html {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             background-color: #050000;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            color: #ff4400;
-            font-family: 'Courier Prime', monospace;
-            overflow: hidden; /* Stops scrolling */
+            font-family: 'Arial Black', sans-serif;
         }
 
-        canvas {
-            background-color: #0f0202;
-            border: 2px solid #330a00;
-            z-index: 10;
-        }
-
-        /* Pulsating glow at the bottom of the webpage */
-        .bottom-glow {
+        /* The pulsating floor gradient */
+        .floor-glow {
             position: absolute;
             bottom: 0;
+            width: 100%;
+            height: 40vh;
+            background: radial-gradient(ellipse at bottom, var(--deep-red) 0%, transparent 70%);
+            animation: pulse 3s infinite ease-in-out;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scaleY(1); }
+            50% { opacity: 1; transform: scaleY(1.2); }
+        }
+
+        /* The Title with Impact Animation */
+        .title-container {
+            z-index: 10;
+            perspective: 1000px;
+        }
+
+        .title {
+            color: #fff;
+            font-size: 8rem;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8), 0 0 50px #000;
+            opacity: 0;
+            transform: scale(5) translateZ(500px);
+            animation: impact 0.6s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes impact {
+            0% {
+                opacity: 0;
+                transform: scale(5) translateZ(500px);
+                filter: blur(20px);
+            }
+            80% {
+                opacity: 1;
+                transform: scale(0.9); /* Slight undershoot for weight */
+                filter: blur(0px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                /* Screen shake effect on impact */
+                text-shadow: 0 0 10px red, 0 0 30px orange;
+            }
+        }
+
+        /* Screen Shake triggered by the title impact */
+        .shake-overlay {
+            position: fixed;
+            top: 0;
             left: 0;
             width: 100%;
-            height: 25vh;
-            background: linear-gradient(to top, rgba(200, 30, 0, 0.4), transparent);
-            animation: pulseGlow 3s infinite alternate ease-in-out;
-            z-index: 1;
+            height: 100%;
             pointer-events: none;
+            animation: camera-shake 0.2s 1.1s ease-out forwards;
         }
 
-        @keyframes pulseGlow {
-            0% { opacity: 0.4; }
-            100% { opacity: 1; }
+        @keyframes camera-shake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(5px, -5px); }
+            50% { transform: translate(-5px, 5px); }
+            100% { transform: translate(0,0); }
         }
 
-        /* The hard zoom-in impact animation for the title */
-        @keyframes slamImpact {
-            0% { transform: scale(4); opacity: 0; }
-            70% { transform: scale(0.95); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        #ui { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            color: #ff8800; 
-            z-index: 20;
+        /* Particles/Embers */
+        .ember {
+            position: absolute;
+            background: orange;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.8;
+            filter: blur(1px);
+            z-index: 2;
         }
     </style>
 </head>
 <body>
 
-    <div id="ui">Waiting for PS5 Controller...</div>
-    <div class="bottom-glow"></div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="shake-overlay"></div>
+    
+    <div class="title-container">
+        <h1 class="title">HELL RISES</h1>
+    </div>
 
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const ui = document.getElementById('ui');
+    <div class="floor-glow"></div>
 
-    let gameState = 'menu';
-    let controllerConnected = false;
-    const DEADZONE = 0.15; 
-
-    // --- EMBER PARTICLE SYSTEM ---
-    let embers = [];
-    function createEmber() {
-        return {
-            x: Math.random() * canvas.width,
-            y: canvas.height + 10,
-            size: Math.random() * 3 + 1,
-            speedY: Math.random() * 2 + 1,
-            speedX: (Math.random() - 0.5),
-            opacity: Math.random() * 0.8 + 0.2
-        };
-    }
-    // Pre-fill screen with embers
-    for(let i=0; i<40; i++) embers.push(createEmber()); 
-
-    // Player Object
-    const player = {
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        radius: 12,
-        speed: 6,
-        color: '#ff8800'
-    };
-
-    // Variables to track title animation timing
-    let menuStartTime = Date.now();
-
-    function update() {
-        const gamepads = navigator.getGamepads();
-        const pad = gamepads[0]; 
-
-        // Update Embers
-        if (gameState === 'menu') {
-            for (let i = 0; i < embers.length; i++) {
-                embers[i].y -= embers[i].speedY;
-                embers[i].x += embers[i].speedX;
-                embers[i].opacity -= 0.005;
-
-                if (embers[i].y < 0 || embers[i].opacity <= 0) {
-                    embers[i] = createEmber(); // Respawn ember at bottom
-                }
-            }
-        }
-
-        if (pad) {
-            controllerConnected = true;
+    <script>
+        function createEmber() {
+            const ember = document.createElement('div');
+            ember.classList.add('ember');
             
-            if (gameState === 'menu') {
-                ui.innerText = "Main Menu";
-                if (pad.buttons[0].pressed) {
-                    gameState = 'play';
-                }
-            } else if (gameState === 'play') {
-                ui.innerText = "Survive the depths.";
-                let moveX = pad.axes[0];
-                let moveY = pad.axes[1];
+            // Randomize size, position, and speed
+            const size = Math.random() * 4 + 1;
+            const startX = Math.random() * window.innerWidth;
+            const duration = Math.random() * 3 + 2;
+            const drift = (Math.random() - 0.5) * 200;
 
-                if (Math.abs(moveX) > DEADZONE) player.x += moveX * player.speed;
-                if (Math.abs(moveY) > DEADZONE) player.y += moveY * player.speed;
-
-                player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-                player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
-            }
-        } else {
-            controllerConnected = false;
-            ui.innerText = "Connect PS5 Controller & Press Any Button";
-        }
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (gameState === 'menu') {
-            // Draw Embers
-            for (let e of embers) {
-                ctx.fillStyle = `rgba(255, 100, 0, ${e.opacity})`;
-                ctx.fillRect(e.x, e.y, e.size, e.size);
-            }
-
-            // Calculate Zoom Impact purely in JavaScript for the Canvas text
-            let timeElapsed = (Date.now() - menuStartTime) / 1000; // in seconds
-            let scale = 1;
-            let opacity = 1;
-
-            if (timeElapsed < 0.5) {
-                // Animate from scale 4 to 1 over 0.5 seconds
-                scale = 4 - (3 * (timeElapsed / 0.5));
-                opacity = timeElapsed / 0.5;
-            } else if (timeElapsed < 0.6) {
-                // Slight bounce impact
-                scale = 0.98;
-            }
-
-            ctx.save();
-            ctx.translate(canvas.width / 2, canvas.height / 2 - 40);
-            ctx.scale(scale, scale);
+            ember.style.width = `${size}px`;
+            ember.style.height = `${size}px`;
+            ember.style.left = `${startX}px`;
+            ember.style.bottom = `0px`;
             
-            // Draw Title (Thin font)
-            ctx.fillStyle = `rgba(255, 68, 0, ${opacity})`;
-            ctx.font = "normal 70px 'Courier Prime'";
-            ctx.textAlign = "center";
-            ctx.fillText("HELL RISES", 0, 0);
-            ctx.restore();
+            document.body.appendChild(ember);
 
-            // Draw "Press Start" text after impact finishes
-            if (timeElapsed > 1) {
-                ctx.fillStyle = "#ffaa00";
-                ctx.font = "20px 'Courier Prime'";
-                ctx.textAlign = "center";
-                
-                if (controllerConnected) {
-                    if (Math.floor(Date.now() / 500) % 2 === 0) {
-                        ctx.fillText("Press [X] to Descend", canvas.width / 2, canvas.height / 2 + 60);
-                    }
-                }
-            }
-        } 
-        else if (gameState === 'play') {
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-            ctx.fillStyle = player.color;
-            ctx.fill();
-            ctx.closePath();
+            // Animate using JS for more randomness than CSS allows
+            const animation = ember.animate([
+                { transform: `translateY(0) translateX(0) scale(1)`, opacity: 1 },
+                { transform: `translateY(-${window.innerHeight}px) translateX(${drift}px) scale(0)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                easing: 'linear'
+            });
+
+            animation.onfinish = () => ember.remove();
         }
-    }
 
-    function gameLoop() {
-        update();
-        draw();
-        requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-</script>
-
+        // Emit embers continuously
+        setInterval(createEmber, 100);
+    </script>
 </body>
 </html>
